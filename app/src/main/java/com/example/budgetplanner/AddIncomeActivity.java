@@ -33,6 +33,7 @@ public class AddIncomeActivity extends AppCompatActivity {
     private Calendar calendar;
     private SimpleDateFormat dateFormatter;
     private Date selectedDate;
+    private DbHandler dbHelper;
 
     // Sample categories for income
     private final String[] incomeCategories = {
@@ -49,6 +50,9 @@ public class AddIncomeActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        // Initialize database helper
+        dbHelper = new DbHandler(this);
 
         // Initialize date formatter
         dateFormatter = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
@@ -144,11 +148,17 @@ public class AddIncomeActivity extends AppCompatActivity {
                 description
         );
 
-        // TODO: Save transaction to database
+        // Save transaction to database
+        long id = dbHelper.addTransaction(transaction);
 
-        // For now, just show a success message and finish the activity
-        Toast.makeText(this, "Income saved successfully", Toast.LENGTH_SHORT).show();
-        finish();
+        if (id != -1) {
+            // Successfully inserted
+            Toast.makeText(this, "Income saved successfully", Toast.LENGTH_SHORT).show();
+            finish();
+        } else {
+            // Failed to insert
+            Toast.makeText(this, "Failed to save income", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private boolean validateInputs() {
@@ -294,7 +304,7 @@ public class AddIncomeActivity extends AppCompatActivity {
 
             // Create a new transaction object
             Transaction transaction = new Transaction(
-                    "expense",
+                    "income",
                     amount,
                     category,
                     selectedDate,
@@ -304,7 +314,7 @@ public class AddIncomeActivity extends AppCompatActivity {
             // TODO: Save transaction to database
 
             // For now, just show a success message and finish the activity
-            Toast.makeText(this, "Expense saved successfully", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Income saved successfully", Toast.LENGTH_SHORT).show();
             finish();
         }
 
