@@ -1,7 +1,10 @@
 package com.example.budgetplanner;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
@@ -10,6 +13,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.List;
@@ -22,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewBalance;
     private ProgressBar progressBarBudget;
     private TextView textViewBudgetTotal;
+    private TextView textViewSpent;
     private ListView listViewTransactions;
     private TextView textViewNoTransactions;
     private Button buttonAddExpense;
@@ -33,8 +38,9 @@ public class MainActivity extends AppCompatActivity {
     // Database helper
     private DbHandler dbHelper;
 
-    // Budget amount (can be moved to settings later)
+    // Budget amount and period
     private double budgetAmount = 1000.00;
+    private String budgetPeriod = BudgetSettingActivity.PERIOD_MONTHLY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +55,25 @@ public class MainActivity extends AppCompatActivity {
 
         // Set up click listeners
         setupClickListeners();
+
+        // Load budget settings
+        loadBudgetSettings();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.menu_budget_settings) {
+            Intent intent = new Intent(MainActivity.this, BudgetSettingActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void initializeViews() {
@@ -57,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
         textViewBalance = findViewById(R.id.textViewBalance);
         progressBarBudget = findViewById(R.id.progressBarBudget);
         textViewBudgetTotal = findViewById(R.id.textViewBudgetTotal);
+        textViewSpent = findViewById(R.id.textViewSpent);
         listViewTransactions = findViewById(R.id.listViewTransactions);
         textViewNoTransactions = findViewById(R.id.textViewNoTransactions);
         buttonAddExpense = findViewById(R.id.buttonAddExpense);
@@ -92,6 +118,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void loadBudgetSettings() {
+        SharedPreferences prefs = getSharedPreferences(BudgetSettingActivity.PREFS_NAME, MODE_PRIVATE);
+        budgetAmount = prefs.getFloat(BudgetSettingActivity.PREF_BUDGET_AMOUNT, 1000.00f);
+        budgetPeriod = prefs.getString(BudgetSettingActivity.PREF_BUDGET_PERIOD, BudgetSettingActivity.PERIOD_MONTHLY);
+    }
+
     private void updateSummaryData() {
         // Get totals from database
         double totalIncome = dbHelper.getTotalIncome();
@@ -108,7 +140,9 @@ public class MainActivity extends AppCompatActivity {
         progressBarBudget.setProgress(Math.min(budgetPercentage, 100));
 
         // Update budget text
-        textViewBudgetTotal.setText(String.format("$%.2f budget", budgetAmount));
+        String periodText = budgetPeriod.equals(BudgetSettingActivity.PERIOD_WEEKLY) ? "weekly" : "monthly";
+        textViewBudgetTotal.setText(String.format("$%.2f %s budget", budgetAmount, periodText));
+        textViewSpent.setText(String.format("$%.2f spent", totalExpenses));
     }
 
     private void displayTransactions() {
@@ -134,6 +168,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // Reload budget settings
+        loadBudgetSettings();
         // Refresh data from the database
         updateSummaryData();
         displayTransactions();
