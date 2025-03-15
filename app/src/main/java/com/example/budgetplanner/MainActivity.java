@@ -1,6 +1,5 @@
 package com.example.budgetplanner;
 
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -13,11 +12,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -35,9 +30,10 @@ public class MainActivity extends AppCompatActivity {
     // Adapter
     private TransactionAdapter transactionAdapter;
 
-    // Sample data (will be replaced with actual database data later)
-    private double totalIncome = 0.00;
-    private double totalExpenses = 0.00;
+    // Database helper
+    private DbHandler dbHelper;
+
+    // Budget amount (can be moved to settings later)
     private double budgetAmount = 1000.00;
 
     @Override
@@ -45,17 +41,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Initialize database helper
+        dbHelper = new DbHandler(this);
+
         // Initialize UI components
         initializeViews();
 
         // Set up click listeners
         setupClickListeners();
-
-        // Update UI with data
-        updateSummaryData();
-
-        // For now, we'll use sample data for transactions
-        displayTransactions();
     }
 
     private void initializeViews() {
@@ -75,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Transaction transaction = (Transaction) parent.getItemAtPosition(position);
                 Toast.makeText(MainActivity.this, "Clicked: " + transaction.getCategory(), Toast.LENGTH_SHORT).show();
+
+                // TODO: Add transaction detail view or edit functionality
             }
         });
     }
@@ -83,39 +78,24 @@ public class MainActivity extends AppCompatActivity {
         buttonAddExpense.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 Intent intent = new Intent(MainActivity.this, AddExpenseActivity.class);
                 startActivity(intent);
-
-
             }
         });
 
         buttonAddIncome.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 Intent intent = new Intent(MainActivity.this, AddIncomeActivity.class);
                 startActivity(intent);
-
-
             }
         });
     }
 
     private void updateSummaryData() {
-        // Calculate totals from transaction list (this will be from database later)
-        List<Transaction> transactions = getTransactionList();
-        totalIncome = 0;
-        totalExpenses = 0;
-
-        for (Transaction transaction : transactions) {
-            if (transaction.isIncome()) {
-                totalIncome += transaction.getAmount();
-            } else {
-                totalExpenses += transaction.getAmount();
-            }
-        }
+        // Get totals from database
+        double totalIncome = dbHelper.getTotalIncome();
+        double totalExpenses = dbHelper.getTotalExpenses();
 
         // Update income, expenses, and balance text views
         textViewIncome.setText(String.format("$%.2f", totalIncome));
@@ -132,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void displayTransactions() {
-        List<Transaction> transactions = getTransactionList();
+        List<Transaction> transactions = dbHelper.getAllTransactions();
 
         if (transactions.isEmpty()) {
             textViewNoTransactions.setVisibility(View.VISIBLE);
@@ -154,31 +134,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // We'll refresh data from the database here when we implement it
-        // For now, just call our update methods
+        // Refresh data from the database
         updateSummaryData();
         displayTransactions();
-    }
-
-    // This is just for sample data, will be replaced with database queries
-    private List<Transaction> getTransactionList() {
-        List<Transaction> transactions = new ArrayList<>();
-
-        // Create a date formatter for parsing sample dates
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-
-        try {
-            // Add some sample transactions
-            transactions.add(new Transaction("income", 2500.00, "Salary", dateFormat.parse("2025-03-01"), "Monthly salary"));
-            transactions.add(new Transaction("expense", 800.00, "Rent", dateFormat.parse("2025-03-03"), "March rent"));
-            transactions.add(new Transaction("expense", 120.50, "Groceries", dateFormat.parse("2025-03-05"), "Weekly shopping"));
-            transactions.add(new Transaction("expense", 45.00, "Dining", dateFormat.parse("2025-03-08"), "Dinner with friends"));
-            transactions.add(new Transaction("expense", 35.00, "Transportation", dateFormat.parse("2025-03-10"), "Gas"));
-            transactions.add(new Transaction("income", 200.00, "Freelance", dateFormat.parse("2025-03-12"), "Logo design project"));
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-        return transactions;
     }
 }

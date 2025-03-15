@@ -30,6 +30,9 @@ public class AddExpenseActivity extends AppCompatActivity {
     private SimpleDateFormat dateFormatter;
     private Date selectedDate;
 
+    // Database helper
+    private DbHandler dbHelper;
+
     // Sample categories for expenses
     private final String[] expenseCategories = {
             "Food & Dining", "Groceries", "Transportation", "Rent", "Utilities",
@@ -41,6 +44,9 @@ public class AddExpenseActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_expense);
+
+        // Initialize database helper
+        dbHelper = new DbHandler(this);
 
         // Initialize date formatter
         dateFormatter = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
@@ -136,11 +142,17 @@ public class AddExpenseActivity extends AppCompatActivity {
                 description
         );
 
-        // TODO: Save transaction to database
+        // Save transaction to database
+        long id = dbHelper.addTransaction(transaction);
 
-        // For now, just show a success message and finish the activity
-        Toast.makeText(this, "Expense saved successfully", Toast.LENGTH_SHORT).show();
-        finish();
+        if (id != -1) {
+            // Successfully inserted
+            Toast.makeText(this, "Expense saved successfully", Toast.LENGTH_SHORT).show();
+            finish();
+        } else {
+            // Failed to insert
+            Toast.makeText(this, "Failed to save expense", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private boolean validateInputs() {
