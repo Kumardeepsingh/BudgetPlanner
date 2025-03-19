@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -72,21 +73,31 @@ public class DbHandler extends SQLiteOpenHelper {
     public long addTransaction(Transaction transaction) {
         SQLiteDatabase db = this.getWritableDatabase();
 
+        SimpleDateFormat customFormat = new SimpleDateFormat("yyyy-M-d", Locale.getDefault());
+        String formattedDate = customFormat.format(transaction.getDate());
+
         ContentValues values = new ContentValues();
         values.put(KEY_TYPE, transaction.getType());
         values.put(KEY_AMOUNT, transaction.getAmount());
         values.put(KEY_CATEGORY, transaction.getCategory());
-        values.put(KEY_DATE, dateFormat.format(transaction.getDate()));
+        values.put(KEY_DATE, formattedDate);  // Ensure date is stored correctly
         values.put(KEY_DESCRIPTION, transaction.getDescription());
 
-        // Insert row
+        Log.d("DBDebug", "Inserting transaction: Type=" + transaction.getType() +
+                ", Amount=" + transaction.getAmount() +
+                ", Date=" + transaction.getDate());
+
         long id = db.insert(TABLE_TRANSACTIONS, null, values);
 
-        // Close database connection
-        db.close();
+        if (id == -1) {
+            Log.e("DBDebug", "Transaction insertion failed.");
+        }
 
+        db.close();
         return id;
     }
+
+
 
     /*
      * Getting a single transaction
@@ -129,14 +140,21 @@ public class DbHandler extends SQLiteOpenHelper {
     /*
      * Getting all transactions
      */
-    public List<Transaction> getAllTransactions() {
+    public List<Transaction> getAllTransactions(String startDate, String endDate) {
         List<Transaction> transactions = new ArrayList<>();
 
+        startDate = startDate.trim(); // Ensure no extra spaces
+        endDate = endDate.trim();
+
+        Log.d("DBDebug", "Fetching transactions from " + startDate + " to " + endDate);
+
         // Select All Query
-        String selectQuery = "SELECT * FROM " + TABLE_TRANSACTIONS + " ORDER BY " + KEY_DATE + " DESC";
+        String selectQuery = "SELECT * FROM " + TABLE_TRANSACTIONS +
+                " WHERE " + KEY_DATE + " BETWEEN ? AND ? " +
+                " ORDER BY " + KEY_DATE + " DESC";
 
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery(selectQuery, null);
+        Cursor cursor = db.rawQuery(selectQuery, new String[]{startDate, endDate});
 
         // Loop through all rows and add to list
         if (cursor.moveToFirst()) {
@@ -180,6 +198,8 @@ public class DbHandler extends SQLiteOpenHelper {
         return count;
     }
 
+
+
     /*
      * Get total income
      */
@@ -195,6 +215,39 @@ public class DbHandler extends SQLiteOpenHelper {
         cursor.close();
 
         return totalIncome;
+    }
+
+    public double getTotalIncomeForPeriod(String startDate, String endDate) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        double totalIncome = 0;
+
+        String query = "SELECT SUM(amount) FROM transactions WHERE type='income' AND date BETWEEN ? AND ?";
+        Cursor cursor = db.rawQuery(query, new String[]{startDate, endDate});
+
+        if (cursor.moveToFirst()) {
+            totalIncome = cursor.getDouble(0);
+        }
+
+        cursor.close();
+        db.close();
+        return totalIncome;
+    }
+
+
+    public double getTotalExpensesForPeriod(String startDate, String endDate) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        double totalExpenses = 0;
+
+        String query = "SELECT SUM(amount) FROM transactions WHERE type='expense' AND date BETWEEN ? AND ?";
+        Cursor cursor = db.rawQuery(query, new String[]{startDate, endDate});
+
+        if (cursor.moveToFirst()) {
+            totalExpenses = cursor.getDouble(0);
+        }
+
+        cursor.close();
+        db.close();
+        return totalExpenses;
     }
 
     /*

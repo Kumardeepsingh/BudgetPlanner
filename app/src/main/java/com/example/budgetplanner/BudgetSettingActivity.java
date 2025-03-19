@@ -1,5 +1,6 @@
 package com.example.budgetplanner;
 
+import android.app.DatePickerDialog;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
@@ -11,21 +12,30 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+
 public class BudgetSettingActivity extends AppCompatActivity {
 
     // UI components
     private EditText editTextBudgetAmount;
-    private RadioGroup radioGroupBudgetPeriod;
-    private RadioButton radioButtonMonthly;
-    private RadioButton radioButtonWeekly;
+    private EditText editTextStartDate, editTextEndDate;
+
     private Button buttonSaveBudget;
 
     // Constants for SharedPreferences
     public static final String PREFS_NAME = "BudgetPrefs";
     public static final String PREF_BUDGET_AMOUNT = "budget_amount";
     public static final String PREF_BUDGET_PERIOD = "budget_period";
-    public static final String PERIOD_MONTHLY = "monthly";
-    public static final String PERIOD_WEEKLY = "weekly";
+    public static final String PREF_BUDGET_START_DATE = "budget_start_date";
+    public static final String PREF_BUDGET_END_DATE = "budget_end_date";
+
+
+
+    public static final String PREF_LAST_RESET_DATE = "last_reset_date";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,10 +59,20 @@ public class BudgetSettingActivity extends AppCompatActivity {
 
     private void initializeViews() {
         editTextBudgetAmount = findViewById(R.id.editTextBudgetAmount);
-        radioGroupBudgetPeriod = findViewById(R.id.radioGroupBudgetPeriod);
-        radioButtonMonthly = findViewById(R.id.radioButtonMonthly);
-        radioButtonWeekly = findViewById(R.id.radioButtonWeekly);
+        editTextStartDate = findViewById(R.id.editTextStartDate);
+        editTextEndDate = findViewById(R.id.editTextEndDate);
+
+        editTextStartDate.setOnClickListener(v -> showDatePicker(editTextStartDate));
+        editTextEndDate.setOnClickListener(v -> showDatePicker(editTextEndDate));
         buttonSaveBudget = findViewById(R.id.buttonSaveBudget);
+    }
+    private void showDatePicker(EditText editText) {
+        Calendar calendar = Calendar.getInstance();
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+            String selectedDate = year + "-" + (month + 1) + "-" + dayOfMonth;
+            editText.setText(selectedDate);
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+        datePickerDialog.show();
     }
 
     private void loadBudgetSettings() {
@@ -62,53 +82,48 @@ public class BudgetSettingActivity extends AppCompatActivity {
         double budgetAmount = prefs.getFloat(PREF_BUDGET_AMOUNT, 1000.00f);
         editTextBudgetAmount.setText(String.format("%.2f", budgetAmount));
 
-        // Get budget period with default of monthly
-        String budgetPeriod = prefs.getString(PREF_BUDGET_PERIOD, PERIOD_MONTHLY);
-        if (budgetPeriod.equals(PERIOD_WEEKLY)) {
-            radioButtonWeekly.setChecked(true);
-        } else {
-            radioButtonMonthly.setChecked(true);
+        // Get start date and end date
+        String startDate = prefs.getString(BudgetSettingActivity.PREF_BUDGET_START_DATE, "");
+        String endDate = prefs.getString(BudgetSettingActivity.PREF_BUDGET_END_DATE, "");
+
+        // Populate start and end date fields if they exist
+        if (!startDate.isEmpty()) {
+            editTextStartDate.setText(startDate);
+        }
+
+        if (!endDate.isEmpty()) {
+            editTextEndDate.setText(endDate);
         }
     }
 
     private void saveBudgetSettings() {
-        // Validate input
         String budgetAmountStr = editTextBudgetAmount.getText().toString().trim();
         if (budgetAmountStr.isEmpty()) {
             editTextBudgetAmount.setError("Please enter a budget amount");
             return;
         }
 
-        // Parse budget amount
-        double budgetAmount;
-        try {
-            budgetAmount = Double.parseDouble(budgetAmountStr);
-            if (budgetAmount <= 0) {
-                editTextBudgetAmount.setError("Budget amount must be greater than zero");
-                return;
-            }
-        } catch (NumberFormatException e) {
-            editTextBudgetAmount.setError("Invalid budget amount");
+        double budgetAmount = Double.parseDouble(budgetAmountStr);
+        if (budgetAmount <= 0) {
+            editTextBudgetAmount.setError("Budget amount must be greater than zero");
             return;
         }
 
-        // Get selected budget period
-        String budgetPeriod = PERIOD_MONTHLY; // default
-        int selectedRadioId = radioGroupBudgetPeriod.getCheckedRadioButtonId();
-        if (selectedRadioId == R.id.radioButtonWeekly) {
-            budgetPeriod = PERIOD_WEEKLY;
+        String startDate = editTextStartDate.getText().toString().trim();
+        String endDate = editTextEndDate.getText().toString().trim();
+        if (startDate.isEmpty() || endDate.isEmpty()) {
+            Toast.makeText(this, "Please select start and end dates", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        // Save to SharedPreferences
         SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
         editor.putFloat(PREF_BUDGET_AMOUNT, (float) budgetAmount);
-        editor.putString(PREF_BUDGET_PERIOD, budgetPeriod);
+        editor.putString(PREF_BUDGET_START_DATE, startDate);
+        editor.putString(PREF_BUDGET_END_DATE, endDate);
         editor.apply();
 
-        // Show success message
         Toast.makeText(this, "Budget settings saved", Toast.LENGTH_SHORT).show();
-
-        // Close activity
         finish();
     }
+
 }

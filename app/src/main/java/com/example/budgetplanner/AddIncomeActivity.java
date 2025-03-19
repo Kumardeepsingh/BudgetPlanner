@@ -1,6 +1,7 @@
 package com.example.budgetplanner;
 
 import android.app.DatePickerDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -55,7 +56,7 @@ public class AddIncomeActivity extends AppCompatActivity {
         dbHelper = new DbHandler(this);
 
         // Initialize date formatter
-        dateFormatter = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+        dateFormatter = new SimpleDateFormat("yyyy-M-dd", Locale.getDefault());
         calendar = Calendar.getInstance();
         selectedDate = calendar.getTime();
 
@@ -129,37 +130,29 @@ public class AddIncomeActivity extends AppCompatActivity {
     }
 
     private void saveIncome() {
-        // Validate inputs
         if (!validateInputs()) {
             return;
         }
 
-        // Get values from inputs
         double amount = Double.parseDouble(editTextAmount.getText().toString().trim());
         String category = spinnerCategory.getSelectedItem().toString();
         String description = editTextDescription.getText().toString().trim();
 
-        // Create a new transaction object
-        Transaction transaction = new Transaction(
-                "income",
-                amount,
-                category,
-                selectedDate,
-                description
-        );
-
-        // Save transaction to database
+        Transaction transaction = new Transaction("income", amount, category, selectedDate, description);
         long id = dbHelper.addTransaction(transaction);
 
         if (id != -1) {
-            // Successfully inserted
             Toast.makeText(this, "Income saved successfully", Toast.LENGTH_SHORT).show();
+
+            // Refresh MainActivity on return
+            Intent resultIntent = new Intent();
+            setResult(RESULT_OK, resultIntent);
             finish();
         } else {
-            // Failed to insert
             Toast.makeText(this, "Failed to save income", Toast.LENGTH_SHORT).show();
         }
     }
+
 
     private boolean validateInputs() {
         boolean isValid = true;
