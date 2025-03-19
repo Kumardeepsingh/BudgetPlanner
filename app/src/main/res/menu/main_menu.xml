@@ -5,4 +5,13 @@
         android:id="@+id/menu_budget_settings"
         android:title="Set Budget"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_view_history"
+        android:title="View History"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_current_period"
+        android:title="Current Period"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
 </menu>

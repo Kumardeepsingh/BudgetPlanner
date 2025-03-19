@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Calendar;
 
 public class DbHandler extends SQLiteOpenHelper {
 
@@ -64,7 +65,6 @@ public class DbHandler extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    // ========== Transaction CRUD operations ==========
 
     /*
      * Adding a new transaction
@@ -88,54 +88,31 @@ public class DbHandler extends SQLiteOpenHelper {
         return id;
     }
 
-    /*
-     * Getting a single transaction
+
+
+// Add these new methods to your DbHandler class
+
+    /**
+     * Gets transactions for the current period (week or month)
      */
-    public Transaction getTransaction(long id) {
-        SQLiteDatabase db = this.getReadableDatabase();
-
-        Cursor cursor = db.query(TABLE_TRANSACTIONS,
-                new String[] { KEY_ID, KEY_TYPE, KEY_AMOUNT, KEY_CATEGORY, KEY_DATE, KEY_DESCRIPTION },
-                KEY_ID + "=?", new String[] { String.valueOf(id) },
-                null, null, null, null);
-
-        if (cursor != null)
-            cursor.moveToFirst();
-        else
-            return null;
-
-        Transaction transaction = null;
-
-        try {
-            transaction = new Transaction(
-                    cursor.getLong(0),
-                    cursor.getString(1),
-                    cursor.getDouble(2),
-                    cursor.getString(3),
-                    dateFormat.parse(cursor.getString(4)),
-                    cursor.getString(5)
-            );
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-        // Close the cursor
-        cursor.close();
-
-        // Return transaction
-        return transaction;
-    }
-
-    /*
-     * Getting all transactions
-     */
-    public List<Transaction> getAllTransactions() {
+    public List<Transaction> getPeriodTransactions(String budgetPeriod, int offset) {
         List<Transaction> transactions = new ArrayList<>();
-
-        // Select All Query
-        String selectQuery = "SELECT * FROM " + TABLE_TRANSACTIONS + " ORDER BY " + KEY_DATE + " DESC";
-
         SQLiteDatabase db = this.getReadableDatabase();
+
+        // Get start and end dates based on budget period and offset
+        Date[] periodDates = getPeriodDates(budgetPeriod, offset);
+        Date startDate = periodDates[0];
+        Date endDate = periodDates[1];
+
+        String startDateStr = dateFormat.format(startDate);
+        String endDateStr = dateFormat.format(endDate);
+
+        // Query for transactions in specified period
+        String selectQuery = "SELECT * FROM " + TABLE_TRANSACTIONS +
+                " WHERE date(" + KEY_DATE + ") >= date('" + startDateStr + "')" +
+                " AND date(" + KEY_DATE + ") <= date('" + endDateStr + "')" +
+                " ORDER BY " + KEY_DATE + " DESC";
+
         Cursor cursor = db.rawQuery(selectQuery, null);
 
         // Loop through all rows and add to list
@@ -166,30 +143,72 @@ public class DbHandler extends SQLiteOpenHelper {
         return transactions;
     }
 
-    /*
-     * Getting transaction count
-     */
-    public int getTransactionsCount() {
-        String countQuery = "SELECT * FROM " + TABLE_TRANSACTIONS;
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery(countQuery, null);
+    private Date[] getPeriodDates(String budgetPeriod, int offset) {
+        Calendar calStart = Calendar.getInstance();
+        Calendar calEnd = Calendar.getInstance();
 
-        int count = cursor.getCount();
-        cursor.close();
+        // Set to current date and apply offset
+        if (budgetPeriod.equals(BudgetSettingActivity.PERIOD_WEEKLY)) {
+            // Weekly period
+            calStart.add(Calendar.WEEK_OF_YEAR, offset);
+            calEnd.add(Calendar.WEEK_OF_YEAR, offset);
 
-        return count;
+            // Set to first day of week
+            calStart.set(Calendar.DAY_OF_WEEK, calStart.getFirstDayOfWeek());
+
+            // Set to last day of week
+            calEnd.set(Calendar.DAY_OF_WEEK, calStart.getFirstDayOfWeek() + 6);
+        } else {
+            // Monthly period
+            calStart.add(Calendar.MONTH, offset);
+            calEnd.add(Calendar.MONTH, offset);
+
+            // Set to first day of month
+            calStart.set(Calendar.DAY_OF_MONTH, 1);
+
+            // Set to last day of month
+            calEnd.set(Calendar.DAY_OF_MONTH, calEnd.getActualMaximum(Calendar.DAY_OF_MONTH));
+        }
+
+        // Reset time to beginning of day for start date
+        calStart.set(Calendar.HOUR_OF_DAY, 0);
+        calStart.set(Calendar.MINUTE, 0);
+        calStart.set(Calendar.SECOND, 0);
+        calStart.set(Calendar.MILLISECOND, 0);
+
+        // Reset time to end of day for end date
+        calEnd.set(Calendar.HOUR_OF_DAY, 23);
+        calEnd.set(Calendar.MINUTE, 59);
+        calEnd.set(Calendar.SECOND, 59);
+        calEnd.set(Calendar.MILLISECOND, 999);
+
+        return new Date[] { calStart.getTime(), calEnd.getTime() };
     }
 
-    /*
-     * Get total income
+    /**
+     * Get total income for the current period
      */
-    public double getTotalIncome() {
+    public double getPeriodIncome(String budgetPeriod, int offset) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT SUM(" + KEY_AMOUNT + ") FROM " + TABLE_TRANSACTIONS +
-                " WHERE " + KEY_TYPE + "='income'", null);
+
+        // Get start and end dates for the period
+        Date[] periodDates = getPeriodDates(budgetPeriod, offset);
+        Date startDate = periodDates[0];
+        Date endDate = periodDates[1];
+
+        String startDateStr = dateFormat.format(startDate);
+        String endDateStr = dateFormat.format(endDate);
+
+        // Query for sum of income in specified period
+        String query = "SELECT SUM(" + KEY_AMOUNT + ") FROM " + TABLE_TRANSACTIONS +
+                " WHERE " + KEY_TYPE + "='income'" +
+                " AND date(" + KEY_DATE + ") >= date('" + startDateStr + "')" +
+                " AND date(" + KEY_DATE + ") <= date('" + endDateStr + "')";
+
+        Cursor cursor = db.rawQuery(query, null);
 
         double totalIncome = 0;
-        if (cursor.moveToFirst()) {
+        if (cursor.moveToFirst() && !cursor.isNull(0)) {
             totalIncome = cursor.getDouble(0);
         }
         cursor.close();
@@ -197,41 +216,36 @@ public class DbHandler extends SQLiteOpenHelper {
         return totalIncome;
     }
 
-    /*
-     * Get total expenses
+    /**
+     * Get total expenses for the current period
      */
-    public double getTotalExpenses() {
+    public double getPeriodExpenses(String budgetPeriod, int offset) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT SUM(" + KEY_AMOUNT + ") FROM " + TABLE_TRANSACTIONS +
-                " WHERE " + KEY_TYPE + "='expense'", null);
+
+        // Get start and end dates for the period
+        Date[] periodDates = getPeriodDates(budgetPeriod, offset);
+        Date startDate = periodDates[0];
+        Date endDate = periodDates[1];
+
+        String startDateStr = dateFormat.format(startDate);
+        String endDateStr = dateFormat.format(endDate);
+
+        // Query for sum of expenses in specified period
+        String query = "SELECT SUM(" + KEY_AMOUNT + ") FROM " + TABLE_TRANSACTIONS +
+                " WHERE " + KEY_TYPE + "='expense'" +
+                " AND date(" + KEY_DATE + ") >= date('" + startDateStr + "')" +
+                " AND date(" + KEY_DATE + ") <= date('" + endDateStr + "')";
+
+        Cursor cursor = db.rawQuery(query, null);
 
         double totalExpenses = 0;
-        if (cursor.moveToFirst()) {
+        if (cursor.moveToFirst() && !cursor.isNull(0)) {
             totalExpenses = cursor.getDouble(0);
         }
         cursor.close();
 
         return totalExpenses;
     }
-
-    /*
-     * Updating a transaction
-     */
-    public int updateTransaction(Transaction transaction) {
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        ContentValues values = new ContentValues();
-        values.put(KEY_TYPE, transaction.getType());
-        values.put(KEY_AMOUNT, transaction.getAmount());
-        values.put(KEY_CATEGORY, transaction.getCategory());
-        values.put(KEY_DATE, dateFormat.format(transaction.getDate()));
-        values.put(KEY_DESCRIPTION, transaction.getDescription());
-
-        // Updating row
-        return db.update(TABLE_TRANSACTIONS, values, KEY_ID + " = ?",
-                new String[] { String.valueOf(transaction.getId()) });
-    }
-
     /*
      * Deleting a transaction
      */

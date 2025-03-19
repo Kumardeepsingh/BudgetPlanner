@@ -32,6 +32,9 @@ public class MainActivity extends AppCompatActivity {
     private Button buttonAddExpense;
     private Button buttonAddIncome;
 
+    private Button buttonPrevPeriod;
+    private Button buttonNextPeriod;
+
     // Adapter
     private TransactionAdapter transactionAdapter;
 
@@ -41,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     // Budget amount and period
     private double budgetAmount = 1000.00;
     private String budgetPeriod = BudgetSettingActivity.PERIOD_MONTHLY;
+    private int periodOffset = 0; // 0 = current period, -1 = previous period, etc.
+    private boolean isViewingHistory = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,12 +73,41 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.menu_budget_settings) {
+        int itemId = item.getItemId();
+
+        if (itemId == R.id.menu_budget_settings) {
             Intent intent = new Intent(MainActivity.this, BudgetSettingActivity.class);
             startActivity(intent);
             return true;
+        } else if (itemId == R.id.menu_view_history) {
+            // Switch to history view
+            isViewingHistory = true;
+            periodOffset = -1; // Start with previous period
+            updatePeriodNavigationVisibility();
+            updateSummaryTitle();
+            loadTransactionsForPeriod();
+            invalidateOptionsMenu(); // Refresh menu to show/hide items
+            return true;
+        } else if (itemId == R.id.menu_current_period) {
+            // Switch back to current period view
+            isViewingHistory = false;
+            periodOffset = 0;
+            updatePeriodNavigationVisibility();
+            updateSummaryTitle();
+            loadTransactionsForPeriod();
+            invalidateOptionsMenu(); // Refresh menu to show/hide items
+            return true;
         }
+
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // Toggle menu items based on current view
+        menu.findItem(R.id.menu_view_history).setVisible(!isViewingHistory);
+        menu.findItem(R.id.menu_current_period).setVisible(isViewingHistory);
+        return super.onPrepareOptionsMenu(menu);
     }
 
     private void initializeViews() {
@@ -87,6 +121,10 @@ public class MainActivity extends AppCompatActivity {
         textViewNoTransactions = findViewById(R.id.textViewNoTransactions);
         buttonAddExpense = findViewById(R.id.buttonAddExpense);
         buttonAddIncome = findViewById(R.id.buttonAddIncome);
+
+        // Initialize period navigation buttons
+        buttonPrevPeriod = findViewById(R.id.buttonPrevPeriod);
+        buttonNextPeriod = findViewById(R.id.buttonNextPeriod);
 
         // Set up ListView item click listener
         listViewTransactions.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -116,7 +154,60 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
+        // Set up period navigation buttons
+        buttonPrevPeriod.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                periodOffset--;
+                updateSummaryTitle();
+                loadTransactionsForPeriod();
+            }
+        });
+
+        buttonNextPeriod.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (periodOffset < 0) {
+                    periodOffset++;
+                    updateSummaryTitle();
+                    loadTransactionsForPeriod();
+                } else {
+                    Toast.makeText(MainActivity.this,
+                            "Already at current period", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
+
+    private void updatePeriodNavigationVisibility() {
+        View layoutPeriodNavigation = findViewById(R.id.layoutPeriodNavigation);
+
+        if (isViewingHistory) {
+            // Show navigation container when viewing history
+            layoutPeriodNavigation.setVisibility(View.VISIBLE);
+
+            // Show navigation buttons when viewing history
+            buttonPrevPeriod.setVisibility(View.VISIBLE);
+            buttonNextPeriod.setVisibility(View.VISIBLE);
+
+            // Hide add transaction buttons when viewing history
+            buttonAddExpense.setVisibility(View.GONE);
+            buttonAddIncome.setVisibility(View.GONE);
+        } else {
+            // Hide navigation container when viewing current period
+            layoutPeriodNavigation.setVisibility(View.GONE);
+
+            // Hide navigation buttons when viewing current period
+            buttonPrevPeriod.setVisibility(View.GONE);
+            buttonNextPeriod.setVisibility(View.GONE);
+
+            // Show add transaction buttons when viewing current period
+            buttonAddExpense.setVisibility(View.VISIBLE);
+            buttonAddIncome.setVisibility(View.VISIBLE);
+        }
+    }
+
 
     private void loadBudgetSettings() {
         SharedPreferences prefs = getSharedPreferences(BudgetSettingActivity.PREFS_NAME, MODE_PRIVATE);
@@ -125,9 +216,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateSummaryData() {
-        // Get totals from database
-        double totalIncome = dbHelper.getTotalIncome();
-        double totalExpenses = dbHelper.getTotalExpenses();
+        // Get totals from database based on the period and offset
+        double totalIncome = dbHelper.getPeriodIncome(budgetPeriod, periodOffset);
+        double totalExpenses = dbHelper.getPeriodExpenses(budgetPeriod, periodOffset);
 
         // Update income, expenses, and balance text views
         textViewIncome.setText(String.format("$%.2f", totalIncome));
@@ -136,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
         textViewBalance.setText(String.format("$%.2f", balance));
 
         // Update budget progress bar
-        int budgetPercentage = budgetAmount > 0 ? (int)((totalExpenses / budgetAmount) * 100) : 0;
+        int budgetPercentage = budgetAmount > 0 ? (int) ((totalExpenses / budgetAmount) * 100) : 0;
         progressBarBudget.setProgress(Math.min(budgetPercentage, 100));
 
         // Update budget text
@@ -145,8 +236,13 @@ public class MainActivity extends AppCompatActivity {
         textViewSpent.setText(String.format("$%.2f spent", totalExpenses));
     }
 
-    private void displayTransactions() {
-        List<Transaction> transactions = dbHelper.getAllTransactions();
+
+    private void loadTransactionsForPeriod() {
+        // Update summary data with the current period offset
+        updateSummaryData();
+
+        // Get transactions for the selected period
+        List<Transaction> transactions = dbHelper.getPeriodTransactions(budgetPeriod, periodOffset);
 
         if (transactions.isEmpty()) {
             textViewNoTransactions.setVisibility(View.VISIBLE);
@@ -170,8 +266,26 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Reload budget settings
         loadBudgetSettings();
+
+        // Update UI based on current view state
+        updatePeriodNavigationVisibility();
+        updateSummaryTitle();
+
         // Refresh data from the database
-        updateSummaryData();
-        displayTransactions();
+        loadTransactionsForPeriod();
+    }
+
+    private void updateSummaryTitle() {
+        TextView summaryTitle = findViewById(R.id.summaryTitleTextView);
+        if (summaryTitle != null) {
+            String periodType = budgetPeriod.equals(BudgetSettingActivity.PERIOD_WEEKLY) ? "Week" : "Month";
+
+            if (periodOffset == 0) {
+                summaryTitle.setText("Current " + periodType + " Summary");
+            } else {
+                String offsetText = Math.abs(periodOffset) == 1 ? "Last " : Math.abs(periodOffset) + " " + periodType + "s Ago ";
+                summaryTitle.setText(offsetText + periodType + " Summary");
+            }
+        }
     }
 }
