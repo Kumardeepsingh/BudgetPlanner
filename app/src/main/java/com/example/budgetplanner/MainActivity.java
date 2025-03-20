@@ -18,6 +18,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationBarView;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -67,7 +70,36 @@ public class MainActivity extends AppCompatActivity {
 
         // Load budget settings
         loadBudgetSettings();
+
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
+
+        bottomNavigationView.setOnItemSelectedListener(new NavigationBarView.OnItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                String title = item.getTitle().toString(); // Get menu item title as String
+
+                switch (title) {
+                    case "Home":
+                        return true;
+
+                    case "Bills":
+                        startActivity(new Intent(MainActivity.this, BillManagementActivity.class));
+                        return true;
+
+                    case "Reports":
+                        // startActivity(new Intent(MainActivity.this, ReportsActivity.class));
+                        return true;
+
+                    case "Settings":
+                        // startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+                        return true;
+                }
+                return false;
+            }
+        });
     }
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

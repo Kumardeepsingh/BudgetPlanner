@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import com.example.budgetplanner.Bill;
+
 
 public class DbHandler extends SQLiteOpenHelper {
 
@@ -46,6 +48,14 @@ public class DbHandler extends SQLiteOpenHelper {
             + KEY_DESCRIPTION + " TEXT"
             + ")";
 
+    private static final String CREATE_TABLE_BILLS = "CREATE TABLE IF NOT EXISTS bills (" +
+            "billID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            "billName TEXT NOT NULL, " +
+            "amount REAL NOT NULL, " +
+            "dueDate TEXT NOT NULL, " +
+            "description TEXT, " +
+            "isPaid INTEGER DEFAULT 0)"; // 0 = Unpaid, 1 = Paid
+
     public DbHandler(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -54,6 +64,8 @@ public class DbHandler extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         // Creating required tables
         db.execSQL(CREATE_TABLE_TRANSACTIONS);
+        db.execSQL(CREATE_TABLE_BILLS);
+
     }
 
     @Override
@@ -294,4 +306,73 @@ public class DbHandler extends SQLiteOpenHelper {
                 new String[] { String.valueOf(id) });
         db.close();
     }
+
+    public long addBill(String billName, double amount, String dueDate, String description) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("billName", billName);
+        values.put("amount", amount);
+        values.put("dueDate", dueDate);
+        values.put("description", description);
+        values.put("isPaid", 0); // Default: unpaid
+
+        long id = db.insert("bills", null, values);
+
+        if (id == -1) {
+            Log.e("DBDebug", "Failed to insert bill into database.");
+        } else {
+            Log.d("DBDebug", "Bill added successfully with ID: " + id);
+        }
+
+        db.close();
+        return id;
+    }
+
+    public List<Bill> getAllBills() {
+        List<Bill> bills = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        String query = "SELECT * FROM bills ORDER BY dueDate ASC";
+        Cursor cursor = db.rawQuery(query, null);
+        Log.d("DBDebug", "Fetching bills from database...");
+
+        if (cursor.moveToFirst()) {
+            do {
+                int billID = cursor.getInt(cursor.getColumnIndexOrThrow("billID"));
+                String billName = cursor.getString(cursor.getColumnIndexOrThrow("billName"));
+                double amount = cursor.getDouble(cursor.getColumnIndexOrThrow("amount"));
+                String dueDate = cursor.getString(cursor.getColumnIndexOrThrow("dueDate"));
+                String description = cursor.getString(cursor.getColumnIndexOrThrow("description"));
+                boolean isPaid = cursor.getInt(cursor.getColumnIndexOrThrow("isPaid")) == 1; // Correct Boolean Parsing
+
+                Log.d("DBDebug", "Fetched Bill: ID=" + billID + ", Name=" + billName);
+                // Ensure `Bill` constructor matches expected types
+                bills.add(new Bill(billID, billName, amount, dueDate, description, isPaid));
+            } while (cursor.moveToNext());
+        } else {
+            Log.d("DBDebug", "No bills found in database.");
+        }
+
+        cursor.close();
+        db.close();
+        return bills;
+    }
+
+
+    public void markBillAsPaid(int billID) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("isPaid", 1);
+        db.update("bills", values, "billID = ?", new String[]{String.valueOf(billID)});
+        db.close();
+    }
+
+    public void deleteBill(int billID) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete("bills", "billID = ?", new String[]{String.valueOf(billID)});
+        db.close();
+    }
+
+
+
 }
