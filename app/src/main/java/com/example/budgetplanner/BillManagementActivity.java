@@ -2,6 +2,7 @@ package com.example.budgetplanner;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
@@ -49,7 +50,6 @@ public class BillManagementActivity extends AppCompatActivity {
         });
         // Load Bills
         loadBills();
-
     }
 
     private void loadBills() {
@@ -62,8 +62,13 @@ public class BillManagementActivity extends AppCompatActivity {
             textViewNoBills.setVisibility(View.GONE);
             listViewBills.setVisibility(View.VISIBLE);
 
-            billAdapter = new BillAdapter(this, bills);
-            listViewBills.setAdapter(billAdapter);
+            // Initialize adapter if needed
+            if (billAdapter == null) {
+                billAdapter = new BillAdapter(this, bills);
+                listViewBills.setAdapter(billAdapter);
+            } else {
+                billAdapter.updateData(bills);
+            }
         }
     }
 

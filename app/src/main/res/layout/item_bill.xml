@@ -10,31 +10,42 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:padding="16dp">
 
-        <TextView
-            android:id="@+id/textViewBillName"
-            android:layout_width="wrap_content"
+        <!-- Left: Bill Name + Due Date -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Bill Name"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
+            <TextView
+                android:id="@+id/textViewBillName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bill Name"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/textViewBillDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Due: YYYY-MM-DD"
+                android:textSize="14sp"
+                android:textColor="@android:color/darker_gray" />
+        </LinearLayout>
+
+        <!-- Right: Amount -->
         <TextView
             android:id="@+id/textViewBillAmount"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
             android:text="$0.00"
-            android:textSize="16sp"
             android:textColor="@android:color/holo_red_dark"
+            android:textSize="16sp"
             android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/textViewBillDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Due: YYYY-MM-DD"
-            android:textSize="14sp" />
     </LinearLayout>
 </androidx.cardview.widget.CardView>

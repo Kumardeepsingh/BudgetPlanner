@@ -358,7 +358,6 @@ public class DbHandler extends SQLiteOpenHelper {
         return bills;
     }
 
-
     public void markBillAsPaid(int billID) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();

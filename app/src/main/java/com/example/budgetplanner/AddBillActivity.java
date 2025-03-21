@@ -1,6 +1,7 @@
 package com.example.budgetplanner;
 
 import android.app.DatePickerDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -86,7 +87,10 @@ public class AddBillActivity extends AppCompatActivity {
 
         if (billID != -1) {
             Toast.makeText(this, "Bill added successfully", Toast.LENGTH_SHORT).show();
-            finish(); // Close activity
+            Intent intent = new Intent(AddBillActivity.this, BillManagementActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK); // Optional: Prevents stack duplicates
+            startActivity(intent);
+
         } else {
             Toast.makeText(this, "Failed to add bill", Toast.LENGTH_SHORT).show();
         }
