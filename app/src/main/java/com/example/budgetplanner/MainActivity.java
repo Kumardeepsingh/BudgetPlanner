@@ -1,7 +1,6 @@
 package com.example.budgetplanner;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,7 +15,10 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -43,9 +45,12 @@ public class MainActivity extends AppCompatActivity {
 
     // Budget amount and period
     private double budgetAmount = 1000.00;
-    private String budgetPeriod = BudgetSettingActivity.PERIOD_MONTHLY;
     private int periodOffset = 0; // 0 = current period, -1 = previous period, etc.
     private boolean isViewingHistory = false;
+
+    // Constants for SharedPreferences
+    public static final String PREFS_NAME = "BudgetPrefs";
+    public static final String PREF_BUDGET_AMOUNT = "budget_amount";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,12 +84,17 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, BudgetSettingActivity.class);
             startActivity(intent);
             return true;
-        } else if (itemId == R.id.menu_view_history) {
+        }else if (itemId == R.id.menu_navigation_bills) {
+            Intent intent = new Intent(MainActivity.this, BillManagementActivity.class);
+            startActivity(intent);
+            return true;
+        }else if (itemId == R.id.menu_view_history) {
             // Switch to history view
             isViewingHistory = true;
             periodOffset = -1; // Start with previous period
             updatePeriodNavigationVisibility();
             updateSummaryTitle();
+            loadBudgetSettings(); // Load budget for previous period
             loadTransactionsForPeriod();
             invalidateOptionsMenu(); // Refresh menu to show/hide items
             return true;
@@ -94,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
             periodOffset = 0;
             updatePeriodNavigationVisibility();
             updateSummaryTitle();
+            loadBudgetSettings(); // Load budget for current period
             loadTransactionsForPeriod();
             invalidateOptionsMenu(); // Refresh menu to show/hide items
             return true;
@@ -107,6 +118,8 @@ public class MainActivity extends AppCompatActivity {
         // Toggle menu items based on current view
         menu.findItem(R.id.menu_view_history).setVisible(!isViewingHistory);
         menu.findItem(R.id.menu_current_period).setVisible(isViewingHistory);
+        menu.findItem(R.id.menu_home).setVisible(false);
+
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -161,6 +174,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 periodOffset--;
                 updateSummaryTitle();
+                loadBudgetSettings(); // Load budget for new period
                 loadTransactionsForPeriod();
             }
         });
@@ -171,6 +185,7 @@ public class MainActivity extends AppCompatActivity {
                 if (periodOffset < 0) {
                     periodOffset++;
                     updateSummaryTitle();
+                    loadBudgetSettings(); // Load budget for new period
                     loadTransactionsForPeriod();
                 } else {
                     Toast.makeText(MainActivity.this,
@@ -208,17 +223,26 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     private void loadBudgetSettings() {
-        SharedPreferences prefs = getSharedPreferences(BudgetSettingActivity.PREFS_NAME, MODE_PRIVATE);
-        budgetAmount = prefs.getFloat(BudgetSettingActivity.PREF_BUDGET_AMOUNT, 1000.00f);
-        budgetPeriod = prefs.getString(BudgetSettingActivity.PREF_BUDGET_PERIOD, BudgetSettingActivity.PERIOD_MONTHLY);
+        // Get budget from database for current period (based on offset)
+        Budget budget = dbHelper.getBudgetByOffset(periodOffset);
+
+        if (budget != null) {
+            // Use the budget from database
+            budgetAmount = budget.getAmount();
+        } else {
+            // Default value if no budget is set
+            budgetAmount = 1000.00;
+        }
+
+        // Update the budget display
+        textViewBudgetTotal.setText(String.format("$%.2f monthly budget", budgetAmount));
     }
 
     private void updateSummaryData() {
-        // Get totals from database based on the period and offset
-        double totalIncome = dbHelper.getPeriodIncome(budgetPeriod, periodOffset);
-        double totalExpenses = dbHelper.getPeriodExpenses(budgetPeriod, periodOffset);
+        // Get monthly data
+        double totalIncome = dbHelper.getMonthIncome(periodOffset);
+        double totalExpenses = dbHelper.getMonthExpenses(periodOffset);
 
         // Update income, expenses, and balance text views
         textViewIncome.setText(String.format("$%.2f", totalIncome));
@@ -230,19 +254,16 @@ public class MainActivity extends AppCompatActivity {
         int budgetPercentage = budgetAmount > 0 ? (int) ((totalExpenses / budgetAmount) * 100) : 0;
         progressBarBudget.setProgress(Math.min(budgetPercentage, 100));
 
-        // Update budget text
-        String periodText = budgetPeriod.equals(BudgetSettingActivity.PERIOD_WEEKLY) ? "weekly" : "monthly";
-        textViewBudgetTotal.setText(String.format("$%.2f %s budget", budgetAmount, periodText));
+        // Update spent text (budgetTotal is updated in loadBudgetSettings)
         textViewSpent.setText(String.format("$%.2f spent", totalExpenses));
     }
-
 
     private void loadTransactionsForPeriod() {
         // Update summary data with the current period offset
         updateSummaryData();
 
-        // Get transactions for the selected period
-        List<Transaction> transactions = dbHelper.getPeriodTransactions(budgetPeriod, periodOffset);
+        // Get monthly transactions
+        List<Transaction> transactions = dbHelper.getMonthTransactions(periodOffset);
 
         if (transactions.isEmpty()) {
             textViewNoTransactions.setVisibility(View.VISIBLE);
@@ -278,13 +299,17 @@ public class MainActivity extends AppCompatActivity {
     private void updateSummaryTitle() {
         TextView summaryTitle = findViewById(R.id.summaryTitleTextView);
         if (summaryTitle != null) {
-            String periodType = budgetPeriod.equals(BudgetSettingActivity.PERIOD_WEEKLY) ? "Week" : "Month";
+            // Get current month name and year for display
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.MONTH, periodOffset);
+            SimpleDateFormat monthYearFormat = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
+            String currentPeriod = monthYearFormat.format(calendar.getTime());
 
             if (periodOffset == 0) {
-                summaryTitle.setText("Current " + periodType + " Summary");
+                summaryTitle.setText("Current Month Summary (" + currentPeriod + ")");
             } else {
-                String offsetText = Math.abs(periodOffset) == 1 ? "Last " : Math.abs(periodOffset) + " " + periodType + "s Ago ";
-                summaryTitle.setText(offsetText + periodType + " Summary");
+                summaryTitle.setText(Math.abs(periodOffset) + " Month" + (Math.abs(periodOffset) > 1 ? "s" : "") +
+                        " Ago Summary (" + currentPeriod + ")");
             }
         }
     }

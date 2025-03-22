@@ -1,8 +1,11 @@
 package com.example.budgetplanner;
 
 import android.app.DatePickerDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -11,6 +14,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.text.SimpleDateFormat;
@@ -64,6 +68,43 @@ public class AddExpenseActivity extends AppCompatActivity {
 
         // Set up save button
         setupSaveButton();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int itemId = item.getItemId();
+
+        if (itemId == R.id.menu_budget_settings) {
+            Intent intent = new Intent(AddExpenseActivity.this, BudgetSettingActivity.class);
+            startActivity(intent);
+            return true;
+        }else if (itemId == R.id.menu_navigation_bills) {
+            Intent intent = new Intent(AddExpenseActivity.this, BillManagementActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        else if (itemId == R.id.menu_home) {
+            Intent intent = new Intent(AddExpenseActivity.this, MainActivity.class);
+            startActivity(intent);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // Toggle menu items based on current view
+        menu.findItem(R.id.menu_view_history).setVisible(false);
+        menu.findItem(R.id.menu_current_period).setVisible(false);
+
+        return super.onPrepareOptionsMenu(menu);
     }
 
     private void initializeViews() {

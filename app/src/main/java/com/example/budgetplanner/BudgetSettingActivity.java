@@ -1,36 +1,45 @@
 package com.example.budgetplanner;
 
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
 
 public class BudgetSettingActivity extends AppCompatActivity {
 
     // UI components
+    private TextView textViewCurrentMonth;
     private EditText editTextBudgetAmount;
-    private RadioGroup radioGroupBudgetPeriod;
-    private RadioButton radioButtonMonthly;
-    private RadioButton radioButtonWeekly;
     private Button buttonSaveBudget;
 
-    // Constants for SharedPreferences
-    public static final String PREFS_NAME = "BudgetPrefs";
-    public static final String PREF_BUDGET_AMOUNT = "budget_amount";
-    public static final String PREF_BUDGET_PERIOD = "budget_period";
-    public static final String PERIOD_MONTHLY = "monthly";
-    public static final String PERIOD_WEEKLY = "weekly";
+    // Database handler
+    private DbHandler dbHandler;
+
+    // Current year-month
+    private String currentYearMonth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_budget_setting);
+
+        // Initialize database handler
+        dbHandler = new DbHandler(this);
+
+        // Get current year-month
+        currentYearMonth = dbHandler.getCurrentYearMonth();
 
         // Initialize UI components
         initializeViews();
@@ -47,27 +56,63 @@ public class BudgetSettingActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int itemId = item.getItemId();
+
+        if (itemId == R.id.menu_navigation_bills) {
+            Intent intent = new Intent(BudgetSettingActivity.this, BillManagementActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        else if (itemId == R.id.menu_home) {
+            Intent intent = new Intent(BudgetSettingActivity.this, MainActivity.class);
+            startActivity(intent);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // Toggle menu items based on current view
+        menu.findItem(R.id.menu_view_history).setVisible(false);
+        menu.findItem(R.id.menu_current_period).setVisible(false);
+        menu.findItem(R.id.menu_budget_settings).setVisible(false);
+
+
+        return super.onPrepareOptionsMenu(menu);
+    }
+
     private void initializeViews() {
+        textViewCurrentMonth = findViewById(R.id.textViewCurrentMonth);
         editTextBudgetAmount = findViewById(R.id.editTextBudgetAmount);
-        radioGroupBudgetPeriod = findViewById(R.id.radioGroupBudgetPeriod);
-        radioButtonMonthly = findViewById(R.id.radioButtonMonthly);
-        radioButtonWeekly = findViewById(R.id.radioButtonWeekly);
         buttonSaveBudget = findViewById(R.id.buttonSaveBudget);
+
+        // Format and display current month
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat monthYearFormat = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
+        textViewCurrentMonth.setText("Budget for: " + monthYearFormat.format(calendar.getTime()));
     }
 
     private void loadBudgetSettings() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        // Get current budget for this month
+        Budget currentBudget = dbHandler.getBudget(currentYearMonth);
 
-        // Get budget amount with default of 1000.00
-        double budgetAmount = prefs.getFloat(PREF_BUDGET_AMOUNT, 1000.00f);
-        editTextBudgetAmount.setText(String.format("%.2f", budgetAmount));
-
-        // Get budget period with default of monthly
-        String budgetPeriod = prefs.getString(PREF_BUDGET_PERIOD, PERIOD_MONTHLY);
-        if (budgetPeriod.equals(PERIOD_WEEKLY)) {
-            radioButtonWeekly.setChecked(true);
+        if (currentBudget != null) {
+            // Display current budget amount
+            editTextBudgetAmount.setText(String.format(Locale.getDefault(), "%.2f", currentBudget.getAmount()));
         } else {
-            radioButtonMonthly.setChecked(true);
+            // No budget set for this month, check if we should copy from previous month
+            // or set default
+            editTextBudgetAmount.setText("1000.00");
         }
     }
 
@@ -83,8 +128,8 @@ public class BudgetSettingActivity extends AppCompatActivity {
         double budgetAmount;
         try {
             budgetAmount = Double.parseDouble(budgetAmountStr);
-            if (budgetAmount <= 0) {
-                editTextBudgetAmount.setError("Budget amount must be greater than zero");
+            if (budgetAmount < 0) {
+                editTextBudgetAmount.setError("Budget amount must be non-negative");
                 return;
             }
         } catch (NumberFormatException e) {
@@ -92,21 +137,14 @@ public class BudgetSettingActivity extends AppCompatActivity {
             return;
         }
 
-        // Get selected budget period
-        String budgetPeriod = PERIOD_MONTHLY; // default
-        int selectedRadioId = radioGroupBudgetPeriod.getCheckedRadioButtonId();
-        if (selectedRadioId == R.id.radioButtonWeekly) {
-            budgetPeriod = PERIOD_WEEKLY;
-        }
-
-        // Save to SharedPreferences
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
-        editor.putFloat(PREF_BUDGET_AMOUNT, (float) budgetAmount);
-        editor.putString(PREF_BUDGET_PERIOD, budgetPeriod);
-        editor.apply();
+        // Create budget object and save to database
+        Budget budget = new Budget(currentYearMonth, budgetAmount);
+        dbHandler.setBudget(budget);
 
         // Show success message
-        Toast.makeText(this, "Budget settings saved", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Budget settings saved for " +
+                        textViewCurrentMonth.getText().toString().replace("Budget for: ", ""),
+                Toast.LENGTH_SHORT).show();
 
         // Close activity
         finish();

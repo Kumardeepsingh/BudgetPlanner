@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Set Budget"
+        android:text="Set Monthly Budget"
         android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
@@ -38,49 +38,27 @@
             android:padding="16dp">
 
             <TextView
+                android:id="@+id/textViewCurrentMonth"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Monthly Budget Amount"
+                android:text="Budget for: March 2025"
                 android:textSize="18sp"
                 android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/editTextBudgetAmount"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:hint="Enter budget amount"
-                android:inputType="numberDecimal" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Budget Period"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:text="Budget Amount"
+                android:textSize="18sp" />
 
-            <RadioGroup
-                android:id="@+id/radioGroupBudgetPeriod"
+            <EditText
+                android:id="@+id/editTextBudgetAmount"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:orientation="vertical">
-
-                <RadioButton
-                    android:id="@+id/radioButtonMonthly"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="Monthly" />
-
-                <RadioButton
-                    android:id="@+id/radioButtonWeekly"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Weekly" />
-
-            </RadioGroup>
+                android:hint="Enter budget amount"
+                android:inputType="numberDecimal" />
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>
