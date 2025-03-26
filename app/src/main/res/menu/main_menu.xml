@@ -2,7 +2,20 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/menu_home"
+        android:title="Home" />
+    <item
         android:id="@+id/menu_budget_settings"
-        android:title="Set Budget"
-        app:showAsAction="ifRoom" />
+        android:title="Set Budget" />
+    <item
+        android:id="@+id/menu_view_history"
+        android:title="View History" />
+    <item
+        android:id="@+id/menu_current_period"
+        android:title="Current Period"
+        android:visible="false" />
+    <item
+        android:id="@+id/menu_navigation_bills"
+        android:title="Bills" />
+
 </menu>

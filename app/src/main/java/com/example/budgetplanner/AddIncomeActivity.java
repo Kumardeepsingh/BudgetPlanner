@@ -4,6 +4,8 @@ import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -13,6 +15,7 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -56,7 +59,7 @@ public class AddIncomeActivity extends AppCompatActivity {
         dbHelper = new DbHandler(this);
 
         // Initialize date formatter
-        dateFormatter = new SimpleDateFormat("yyyy-M-dd", Locale.getDefault());
+        dateFormatter = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
         calendar = Calendar.getInstance();
         selectedDate = calendar.getTime();
 
@@ -71,6 +74,43 @@ public class AddIncomeActivity extends AppCompatActivity {
 
         // Set up save button
         setupSaveButton();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int itemId = item.getItemId();
+
+        if (itemId == R.id.menu_budget_settings) {
+            Intent intent = new Intent(AddIncomeActivity.this, BudgetSettingActivity.class);
+            startActivity(intent);
+            return true;
+        }else if (itemId == R.id.menu_navigation_bills) {
+            Intent intent = new Intent(AddIncomeActivity.this, BillManagementActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        else if (itemId == R.id.menu_home) {
+            Intent intent = new Intent(AddIncomeActivity.this, MainActivity.class);
+            startActivity(intent);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // Toggle menu items based on current view
+        menu.findItem(R.id.menu_view_history).setVisible(false);
+        menu.findItem(R.id.menu_current_period).setVisible(false);
+
+        return super.onPrepareOptionsMenu(menu);
     }
 
     private void initializeViews() {
@@ -130,29 +170,37 @@ public class AddIncomeActivity extends AppCompatActivity {
     }
 
     private void saveIncome() {
+        // Validate inputs
         if (!validateInputs()) {
             return;
         }
 
+        // Get values from inputs
         double amount = Double.parseDouble(editTextAmount.getText().toString().trim());
         String category = spinnerCategory.getSelectedItem().toString();
         String description = editTextDescription.getText().toString().trim();
 
-        Transaction transaction = new Transaction("income", amount, category, selectedDate, description);
+        // Create a new transaction object
+        Transaction transaction = new Transaction(
+                "income",
+                amount,
+                category,
+                selectedDate,
+                description
+        );
+
+        // Save transaction to database
         long id = dbHelper.addTransaction(transaction);
 
         if (id != -1) {
+            // Successfully inserted
             Toast.makeText(this, "Income saved successfully", Toast.LENGTH_SHORT).show();
-
-            // Refresh MainActivity on return
-            Intent resultIntent = new Intent();
-            setResult(RESULT_OK, resultIntent);
             finish();
         } else {
+            // Failed to insert
             Toast.makeText(this, "Failed to save income", Toast.LENGTH_SHORT).show();
         }
     }
-
 
     private boolean validateInputs() {
         boolean isValid = true;

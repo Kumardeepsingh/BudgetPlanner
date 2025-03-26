@@ -55,7 +55,7 @@ public class BillAdapter extends BaseAdapter {
             holder.textViewBillName = convertView.findViewById(R.id.textViewBillName);
             holder.textViewBillAmount = convertView.findViewById(R.id.textViewBillAmount);
             holder.textViewBillDate = convertView.findViewById(R.id.textViewBillDate);
-           // holder.textViewAmount = convertView.findViewById(R.id.textViewTransactionAmount);
+            // holder.textViewAmount = convertView.findViewById(R.id.textViewTransactionAmount);
 
             convertView.setTag(holder);
         } else {
@@ -78,18 +78,18 @@ public class BillAdapter extends BaseAdapter {
         //holder.textViewBillDate.setText("Due: " + bill.getDueDate());
 
         // Set description (if empty, show "No description")
-       // String description = transaction.getDescription();
+        // String description = transaction.getDescription();
         //holder.textViewDescription.setText(description.isEmpty() ? "No description" : description);
 
         // Format and set date
-       // holder.textViewDate.setText(dateFormat.format(transaction.getDate()));
+        // holder.textViewDate.setText(dateFormat.format(transaction.getDate()));
 
         // Format and set amount with appropriate color
         String amountText;
 
-            amountText = String.format("$%.2f", bill.getAmount());
-            holder.textViewBillAmount.setTextColor(context.getResources().getColor(android.R.color.holo_red_dark));
-            holder.textViewBillAmount.setText(amountText);
+        amountText = String.format("$%.2f", bill.getAmount());
+        holder.textViewBillAmount.setTextColor(context.getResources().getColor(android.R.color.holo_red_dark));
+        holder.textViewBillAmount.setText(amountText);
 
         return convertView;
     }

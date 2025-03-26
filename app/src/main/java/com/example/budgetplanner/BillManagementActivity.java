@@ -2,13 +2,15 @@ package com.example.budgetplanner;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -50,6 +52,41 @@ public class BillManagementActivity extends AppCompatActivity {
         });
         // Load Bills
         loadBills();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int itemId = item.getItemId();
+
+        if (itemId == R.id.menu_budget_settings) {
+            Intent intent = new Intent(BillManagementActivity.this, BudgetSettingActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        else if (itemId == R.id.menu_home) {
+            Intent intent = new Intent(BillManagementActivity.this, MainActivity.class);
+            startActivity(intent);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // Toggle menu items based on current view
+        menu.findItem(R.id.menu_view_history).setVisible(false);
+        menu.findItem(R.id.menu_current_period).setVisible(false);
+        menu.findItem(R.id.menu_navigation_bills).setVisible(false);
+
+
+        return super.onPrepareOptionsMenu(menu);
     }
 
     private void loadBills() {

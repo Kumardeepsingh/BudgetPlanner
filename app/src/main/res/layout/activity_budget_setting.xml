@@ -5,15 +5,13 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingTop="70dp"
     tools:context=".BudgetSettingActivity">
-
     <TextView
         android:id="@+id/textViewBudgetTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Set Budget"
+        android:text="Set Monthly Budget"
         android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
@@ -40,62 +38,27 @@
             android:padding="16dp">
 
             <TextView
+                android:id="@+id/textViewCurrentMonth"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Budget Amount"
+                android:text="Budget for: March 2025"
                 android:textSize="18sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Budget Amount"
+                android:textSize="18sp" />
 
             <EditText
                 android:id="@+id/editTextBudgetAmount"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:hint="Enter budget amount"
                 android:inputType="numberDecimal" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Budget Period"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Start Date"
-                android:textSize="18sp"
-                android:layout_marginTop="24dp"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/editTextStartDate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Select start date"
-                android:focusable="false"
-                android:clickable="true"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="End Date"
-                android:textSize="18sp"
-                android:layout_marginTop="24dp"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/editTextEndDate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Select end date"
-                android:focusable="false"
-                android:clickable="true"/>
-
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>
