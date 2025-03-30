@@ -1,8 +1,13 @@
 package com.example.budgetplanner;
 
+import android.app.AlarmManager;
 import android.app.DatePickerDialog;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -17,7 +22,10 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 public class AddBillActivity extends AppCompatActivity {
 
@@ -33,6 +41,12 @@ public class AddBillActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_add_bill);
+
+        // Request notification permission for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermission();
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -60,6 +74,7 @@ public class AddBillActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 saveBill();
+
             }
         });
     }
@@ -126,6 +141,7 @@ public class AddBillActivity extends AppCompatActivity {
         long billID = dbHandler.addBill(billName, amount, dueDate, description);
 
         if (billID != -1) {
+            scheduleBillNotification(billName, dueDate);
             Toast.makeText(this, "Bill added successfully", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(AddBillActivity.this, BillManagementActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK); // Optional: Prevents stack duplicates
@@ -133,6 +149,122 @@ public class AddBillActivity extends AppCompatActivity {
 
         } else {
             Toast.makeText(this, "Failed to add bill", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+                    android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 100);
+            }
+        }
+    }
+
+    private void scheduleBillNotification(String billName, String dueDateString) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-M-d", Locale.getDefault());
+            Date dueDate = sdf.parse(dueDateString);
+
+            if (dueDate == null) {
+                Log.e("AddBillActivity", "Failed to parse due date: " + dueDateString);
+                return;
+            }
+
+            // Set up notification for 2 days before the due date at 10 AM
+            Calendar notificationCalendar = Calendar.getInstance();
+            notificationCalendar.setTime(dueDate);
+            notificationCalendar.add(Calendar.DAY_OF_YEAR, -2); // 2 days before
+            notificationCalendar.set(Calendar.HOUR_OF_DAY, 10);
+            notificationCalendar.set(Calendar.MINUTE, 0);
+            notificationCalendar.set(Calendar.SECOND, 0);
+
+            long triggerTime = notificationCalendar.getTimeInMillis();
+            long currentTime = System.currentTimeMillis();
+
+            // Log scheduled time for debugging
+            //Log.d("AddBillActivity", "Bill due date: " + dueDateString);
+            //Log.d("AddBillActivity", "Notification scheduled for: " +
+            //        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(notificationCalendar.getTime()));
+
+            // Only schedule if trigger time is in the future
+            if (triggerTime <= currentTime) {
+                Log.d("AddBillActivity", "Not scheduling notification - date is in the past");
+                return;
+            }
+
+            int requestCode = (billName + dueDateString).hashCode();
+            Intent intent = new Intent(this, BillReminderReceiver.class);
+            intent.putExtra("billName", billName);
+            intent.putExtra("dueDate", dueDateString);
+
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    this,
+                    requestCode,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+            // Check for permission to schedule exact alarms on Android 12+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                    Log.d("AddBillActivity", "Exact alarm scheduled for " + billName);
+                } else {
+                    // Fall back to inexact alarm
+                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                    Log.d("AddBillActivity", "Inexact alarm scheduled (permission not granted)");
+
+                    // Show alert dialog instead of just a toast
+                    showAlarmPermissionDialog();
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                Log.d("AddBillActivity", "Exact alarm scheduled for " + billName);
+            } else {
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                Log.d("AddBillActivity", "Exact alarm scheduled for " + billName);
+            }
+
+        } catch (Exception e) {
+            Log.e("AddBillActivity", "Error scheduling notification: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Add this method to show a dialog with clearer instructions
+    private void showAlarmPermissionDialog() {
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setTitle("Permission Required")
+                .setMessage("For precise bill reminders, please enable the \"Schedule Exact Alarms\" permission in your device settings.")
+                .setPositiveButton("Open Settings", (dialog, which) -> {
+                    // Direct the user to the exact alarm permission settings
+                    Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                            android.net.Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                })
+                .setNegativeButton("Later", (dialog, which) -> {
+                    dialog.dismiss();
+                    Toast.makeText(this, "Bill added but reminders may not be precise", Toast.LENGTH_LONG).show();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 100) {
+            // Check if notification permission was granted
+            if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                Log.d("AddBillActivity", "Notification permission granted");
+            } else {
+                Log.d("AddBillActivity", "Notification permission denied");
+                Toast.makeText(this, "Notifications won't work without permission", Toast.LENGTH_LONG).show();
+            }
         }
     }
 
