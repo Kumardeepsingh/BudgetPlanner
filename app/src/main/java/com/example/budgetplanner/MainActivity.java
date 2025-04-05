@@ -285,6 +285,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        // Process any overdue bills first
+        dbHelper.processOverdueBills();
+
         // Reload budget settings
         loadBudgetSettings();
 
