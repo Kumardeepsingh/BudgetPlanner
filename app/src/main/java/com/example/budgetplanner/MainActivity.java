@@ -1,6 +1,7 @@
 package com.example.budgetplanner;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -48,9 +49,8 @@ public class MainActivity extends AppCompatActivity {
     private int periodOffset = 0; // 0 = current period, -1 = previous period, etc.
     private boolean isViewingHistory = false;
 
-    // Constants for SharedPreferences
-    public static final String PREFS_NAME = "BudgetPrefs";
-    public static final String PREF_BUDGET_AMOUNT = "budget_amount";
+    private static final String PREFS_NAME = "BudgetPrefs";
+    private static final String PREF_BUDGET_ALERT_SHOWN = "budget_alert_shown";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -237,6 +237,12 @@ public class MainActivity extends AppCompatActivity {
 
         // Update the budget display
         textViewBudgetTotal.setText(String.format("$%.2f monthly budget", budgetAmount));
+
+        // Reset 90% alert flag when new period is viewed (only if periodOffset == 0)
+        if (periodOffset == 0) {
+            SharedPreferences prefs = getSharedPreferences("BudgetPrefs", MODE_PRIVATE);
+            prefs.edit().putBoolean("budget_alert_shown", false).apply();
+        }
     }
 
     private void updateSummaryData() {
@@ -256,6 +262,18 @@ public class MainActivity extends AppCompatActivity {
 
         // Update spent text (budgetTotal is updated in loadBudgetSettings)
         textViewSpent.setText(String.format("$%.2f spent", totalExpenses));
+
+        // Trigger budget notification if over 90%
+        if (budgetPercentage >= 90 && periodOffset == 0) {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            boolean alertShown = prefs.getBoolean(PREF_BUDGET_ALERT_SHOWN, false);
+
+            if (!alertShown) {
+                BudgetNotificationHelper.showBudgetWarningNotification(this, totalExpenses, budgetAmount);
+                prefs.edit().putBoolean(PREF_BUDGET_ALERT_SHOWN, true).apply();
+            }
+        }
+
     }
 
     private void loadTransactionsForPeriod() {

@@ -44,6 +44,7 @@
             </intent-filter>
         </activity>
         <receiver android:name=".BillReminderReceiver" android:exported="true" />
+        <receiver android:name=".BudgetNotificationHelper" android:exported="true" />
     </application>
 
 </manifest>
