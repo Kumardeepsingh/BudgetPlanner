@@ -256,15 +256,7 @@ public class DbHandler extends SQLiteOpenHelper {
         return totalExpenses;
     }
 
-    /**
-     * Delete a transaction
-     */
-    public void deleteTransaction(long id) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(TABLE_TRANSACTIONS, KEY_ID + " = ?",
-                new String[] { String.valueOf(id) });
-        db.close();
-    }
+
 
     /**
      * Get current year-month string
@@ -345,33 +337,7 @@ public class DbHandler extends SQLiteOpenHelper {
         return budget;
     }
 
-    /**
-     * Get all budgets
-     */
-    public List<Budget> getAllBudgets() {
-        List<Budget> budgets = new ArrayList<>();
-        SQLiteDatabase db = this.getReadableDatabase();
 
-        String selectQuery = "SELECT * FROM " + TABLE_BUDGETS +
-                " ORDER BY " + KEY_YEAR_MONTH + " DESC";
-
-        Cursor cursor = db.rawQuery(selectQuery, null);
-
-        if (cursor.moveToFirst()) {
-            do {
-                Budget budget = new Budget(
-                        cursor.getLong(0),  // id
-                        cursor.getString(1), // year_month
-                        cursor.getDouble(2)  // amount
-                );
-
-                budgets.add(budget);
-            } while (cursor.moveToNext());
-        }
-
-        cursor.close();
-        return budgets;
-    }
 
     public long addBill(String billName, double amount, Date dueDate, String description) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -503,9 +469,4 @@ public class DbHandler extends SQLiteOpenHelper {
         db.close();
     }
 
-    public void deleteBill(int billID) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.delete("bills", "billID = ?", new String[]{String.valueOf(billID)});
-        db.close();
-    }
 }

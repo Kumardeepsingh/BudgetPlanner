@@ -6,7 +6,7 @@ public class Bill {
     private double amount;
     private String dueDate;
     private String description;
-    private boolean isPaid; // Ensure this is a boolean
+    private boolean isPaid;
 
     // Constructor
     public Bill(int billID, String billName, double amount, String dueDate, String description, boolean isPaid) {

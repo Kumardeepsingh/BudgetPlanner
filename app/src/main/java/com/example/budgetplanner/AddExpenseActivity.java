@@ -217,9 +217,6 @@ public class AddExpenseActivity extends AppCompatActivity {
             }
         }
 
-        // Validate category - not needed for Spinner as it always has a selection
-        // But we can check if a valid category is selected if needed
-
         return isValid;
     }
 }

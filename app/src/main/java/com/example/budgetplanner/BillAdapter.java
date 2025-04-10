@@ -66,7 +66,6 @@ public class BillAdapter extends BaseAdapter {
         Bill bill = getItem(position);
 
         holder.textViewBillName.setText(bill.getBillName());
-        //holder.textViewBillAmount.setText("$" + bill.getAmount());
 
         try {
             Date parsedDate = new SimpleDateFormat("yyyy-M-d", Locale.getDefault()).parse(bill.getDueDate());
@@ -75,14 +74,6 @@ public class BillAdapter extends BaseAdapter {
         } catch (ParseException e) {
             holder.textViewBillDate.setText("Due: " + bill.getDueDate()); // fallback
         }
-        //holder.textViewBillDate.setText("Due: " + bill.getDueDate());
-
-        // Set description (if empty, show "No description")
-        // String description = transaction.getDescription();
-        //holder.textViewDescription.setText(description.isEmpty() ? "No description" : description);
-
-        // Format and set date
-        // holder.textViewDate.setText(dateFormat.format(transaction.getDate()));
 
         // Format and set amount with appropriate color
         String amountText;

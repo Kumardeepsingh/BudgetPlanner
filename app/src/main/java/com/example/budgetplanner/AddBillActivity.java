@@ -191,11 +191,6 @@ public class AddBillActivity extends AppCompatActivity {
             long triggerTime = notificationCalendar.getTimeInMillis();
             long currentTime = System.currentTimeMillis();
 
-            // Log scheduled time for debugging
-            //Log.d("AddBillActivity", "Bill due date: " + dueDateString);
-            //Log.d("AddBillActivity", "Notification scheduled for: " +
-            //        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(notificationCalendar.getTime()));
-
             // Only schedule if trigger time is in the future
             if (triggerTime <= currentTime) {
                 Log.d("AddBillActivity", "Not scheduling notification - date is in the past");
@@ -226,7 +221,7 @@ public class AddBillActivity extends AppCompatActivity {
                     alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
                     Log.d("AddBillActivity", "Inexact alarm scheduled (permission not granted)");
 
-                    // Show alert dialog instead of just a toast
+                    // Show alert dialog
                     showAlarmPermissionDialog();
                 }
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -242,8 +237,7 @@ public class AddBillActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
-    // Add this method to show a dialog with clearer instructions
+    
     private void showAlarmPermissionDialog() {
         androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
         builder.setTitle("Permission Required")

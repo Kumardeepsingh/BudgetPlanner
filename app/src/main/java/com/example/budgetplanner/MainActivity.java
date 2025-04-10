@@ -139,16 +139,7 @@ public class MainActivity extends AppCompatActivity {
         buttonPrevPeriod = findViewById(R.id.buttonPrevPeriod);
         buttonNextPeriod = findViewById(R.id.buttonNextPeriod);
 
-        // Set up ListView item click listener
-        listViewTransactions.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Transaction transaction = (Transaction) parent.getItemAtPosition(position);
-                Toast.makeText(MainActivity.this, "Clicked: " + transaction.getCategory(), Toast.LENGTH_SHORT).show();
 
-                // TODO: Add transaction detail view or edit functionality
-            }
-        });
     }
 
     private void setupClickListeners() {
