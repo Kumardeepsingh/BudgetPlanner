@@ -373,12 +373,12 @@ public class DbHandler extends SQLiteOpenHelper {
         return budgets;
     }
 
-    public long addBill(String billName, double amount, String dueDate, String description) {
+    public long addBill(String billName, double amount, Date dueDate, String description) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put("billName", billName);
         values.put("amount", amount);
-        values.put("dueDate", dueDate);
+        values.put("dueDate", dateFormat.format(dueDate));
         values.put("description", description);
         values.put("isPaid", 0); // Default: unpaid
 
@@ -422,6 +422,77 @@ public class DbHandler extends SQLiteOpenHelper {
         cursor.close();
         db.close();
         return bills;
+    }
+
+    /**
+     * Check for overdue bills and automatically mark them as paid,
+     * adding them as expense transactions
+     */
+    public void processOverdueBills() {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        try {
+
+            String currentDate = dateFormat.format(new Date());
+
+
+
+            // Find unpaid bills that are due or past due
+            String query = "SELECT * FROM bills WHERE isPaid = 0 AND date(dueDate) <= date(?)";
+            Cursor cursor = db.rawQuery(query, new String[]{currentDate});
+
+            if (cursor.moveToFirst()) {
+                do {
+                    try {
+                        int billID = cursor.getInt(cursor.getColumnIndexOrThrow("billID"));
+                        String billName = cursor.getString(cursor.getColumnIndexOrThrow("billName"));
+                        double amount = cursor.getDouble(cursor.getColumnIndexOrThrow("amount"));
+                        String dueDate = cursor.getString(cursor.getColumnIndexOrThrow("dueDate"));
+                        String description = cursor.getString(cursor.getColumnIndexOrThrow("description"));
+
+                        // Create a transaction for this bill
+                        Date date;
+                        try {
+                            // Try to parse the date from the database
+                            date = dateFormat.parse(dueDate);
+                        } catch (ParseException e) {
+                            // If parsing fails, use current date as fallback
+                            date = new Date();
+                        }
+
+                        Transaction transaction = new Transaction(
+                                -1, // ID will be assigned by database
+                                "expense",
+                                amount,
+                                "Bills", // Using "Bills" as the category
+                                date,
+                                "Auto-payment: " + billName + (description != null && !description.isEmpty() ? " - " + description : "")
+                        );
+
+                        // Add the transaction
+                        long transactionId = addTransaction(transaction);
+
+                        if (transactionId != -1) {
+                            // Mark the bill as paid
+                            markBillAsPaid(billID);
+                            Log.d("BillPayment", "Successfully processed bill: " + billName + " for $" + amount);
+                        } else {
+                            Log.e("BillPayment", "Failed to create transaction for bill: " + billName);
+                        }
+                    } catch (Exception e) {
+                        Log.e("BillPayment", "Error processing individual bill", e);
+                    }
+                } while (cursor.moveToNext());
+            } else {
+                Log.d("BillPayment", "No overdue bills found");
+            }
+
+            cursor.close();
+        } catch (Exception e) {
+            Log.e("BillPayment", "Error in processOverdueBills", e);
+        } finally {
+            db.close();
+        }
     }
 
     public void markBillAsPaid(int billID) {

@@ -22,6 +22,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -34,6 +35,8 @@ public class AddBillActivity extends AppCompatActivity {
     private Button buttonSaveBill;
     private DbHandler dbHandler;
     private Calendar calendar;
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
 
 
     @Override
@@ -73,7 +76,11 @@ public class AddBillActivity extends AppCompatActivity {
         buttonSaveBill.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                saveBill();
+                try {
+                    saveBill();
+                } catch (ParseException e) {
+                    throw new RuntimeException(e);
+                }
 
             }
         });
@@ -126,7 +133,7 @@ public class AddBillActivity extends AppCompatActivity {
         datePickerDialog.show();
     }
 
-    private void saveBill() {
+    private void saveBill() throws ParseException {
         String billName = editTextBillName.getText().toString().trim();
         String amountStr = editTextBillAmount.getText().toString().trim();
         String dueDate = editTextBillDate.getText().toString().trim();
@@ -138,7 +145,8 @@ public class AddBillActivity extends AppCompatActivity {
         }
 
         double amount = Double.parseDouble(amountStr);
-        long billID = dbHandler.addBill(billName, amount, dueDate, description);
+        Date date = dateFormat.parse(dueDate);
+        long billID = dbHandler.addBill(billName, amount,date , description);
 
         if (billID != -1) {
             scheduleBillNotification(billName, dueDate);
