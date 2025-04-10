@@ -146,7 +146,6 @@ public class MainActivity extends AppCompatActivity {
                 Transaction transaction = (Transaction) parent.getItemAtPosition(position);
                 Toast.makeText(MainActivity.this, "Clicked: " + transaction.getCategory(), Toast.LENGTH_SHORT).show();
 
-                // TODO: Add transaction detail view or edit functionality
             }
         });
     }
